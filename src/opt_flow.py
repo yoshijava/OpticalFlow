@@ -41,7 +41,7 @@ def draw_flow(img, flow, step=16):
         if maxDist < dist:
             maxDist = dist
     # if maxDist != 0:
-    maxDist = math.sqrt(maxDist)/scale
+    maxDist = math.sqrt(maxDist)
     return vis
 
 
@@ -125,6 +125,6 @@ if __name__ == '__main__':
             print('glitch is', ['off', 'on'][show_glitch])
         period = (time.time() - start_time)
         print("--- Process time: %s sec ---" % period)
-        print("max dist = %d" % maxDist)
+        print("max dist = %d" % (maxDist/scale))
 
     cv2.destroyAllWindows()
