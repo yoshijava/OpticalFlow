@@ -20,11 +20,12 @@ import numpy as np
 import cv2
 import video
 import time
+import sys
 import math
 
-scale = 0.2
-maxDist = 0
+scale = 0.4
 interval = 1
+vectorDist = [0]*20
 
 def draw_flow(img, flow, step=16):
     h, w = img.shape[:2]
@@ -34,14 +35,23 @@ def draw_flow(img, flow, step=16):
     lines = np.int32(lines + 0.5)
     vis = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
     cv2.polylines(vis, lines, 0, (0, 255, 0))
-    global maxDist
+    maxDist = 0
     for (x1, y1), (x2, y2) in lines:
         cv2.circle(vis, (x1, y1), 1, (0, 255, 0), -1)
         dist = (x1-x2)^2 + (y1-y2)^2
         if maxDist < dist:
             maxDist = dist
     # if maxDist != 0:
-    maxDist = math.sqrt(maxDist)
+    global scale
+    sqrtMaxDist = math.sqrt(maxDist)/scale
+    # print("max dist = %d" % (sqrtMaxDist/scale)),
+    index = int(sqrtMaxDist)
+    global vectorDist
+    vectorDist[index] += 1
+    for x in vectorDist:
+        print x,
+
+    sys.stdout.flush()
     return vis
 
 
@@ -124,7 +134,6 @@ if __name__ == '__main__':
                 cur_glitch = img
             print('glitch is', ['off', 'on'][show_glitch])
         period = (time.time() - start_time)
-        print("--- Process time: %s sec ---" % period)
-        print("max dist = %d" % (maxDist/scale))
+        # print("--- Process time: %s sec ---" % period)
 
     cv2.destroyAllWindows()
