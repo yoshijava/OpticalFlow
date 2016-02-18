@@ -22,10 +22,13 @@ import video
 import time
 import sys
 import math
+import pylab
+import imageio
+from subprocess import call
 
 scale = 0.4
 interval = 1
-vectorDist = [0]*20
+vectorDist = [0]*35
 
 def draw_flow(img, flow, step=16):
     h, w = img.shape[:2]
@@ -48,9 +51,7 @@ def draw_flow(img, flow, step=16):
     index = int(sqrtMaxDist)
     global vectorDist
     vectorDist[index] += 1
-    for x in vectorDist:
-        print x,
-
+    print (vectorDist)
     sys.stdout.flush()
     return vis
 
@@ -85,25 +86,29 @@ if __name__ == '__main__':
         fn = 0
 
     i = 1
-    global scale
-    global interval
     # cam = video.create_capture(fn)
-    input = "../images/bbb/bbb%00004d.jpg" % i
+    # filepath = "../images/candy/candy%00004d.jpg"
+    filepath = "../images/bbb/bbb%00004d.jpg"
+    input =  filepath % i
     # input = "../images/candy/candy%00004d.jpg" % i
     # print(input)
-    prev = cv2.imread(input, 0)
+
+    filename = '../videos/bbb.mp4'
+    vid = imageio.get_reader(filename,  'ffmpeg')
+    prev = vid.get_data(0)
+    prev = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
     prev = cv2.resize(prev, (0,0), fx=scale, fy=scale)
-    # prevgray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
     show_hsv = False
     show_glitch = False
     cur_glitch = prev
     while True:
         start_time = time.time()
         i = i + interval
-        input = "../images/bbb/bbb%00004d.jpg" % i
+        # input = filepath % i
         # input = "../images/candy/candy%00004d.jpg" % i
         # print(input)
-        img = cv2.imread(input, 0)
+        img = vid.get_data(i)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img = cv2.resize(img, (0,0), fx=scale, fy=scale)
         # gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         flow = cv2.calcOpticalFlowFarneback(prev, img, None, 0.5, # pyr_scale
