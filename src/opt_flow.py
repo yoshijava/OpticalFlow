@@ -26,7 +26,7 @@ import pylab
 import imageio
 from subprocess import call
 
-scale = 0.4
+scale = 0.3
 interval = 1
 vectorDist = [0]*35
 
@@ -88,12 +88,13 @@ if __name__ == '__main__':
     i = 1
     # cam = video.create_capture(fn)
     # filepath = "../images/candy/candy%00004d.jpg"
-    filepath = "../images/bbb/bbb%00004d.jpg"
-    input =  filepath % i
+    #filepath = "../images/bbb/bbb%00004d.jpg"
+    #input =  filepath % i
     # input = "../images/candy/candy%00004d.jpg" % i
     # print(input)
-
-    filename = '../videos/bbb.mp4'
+    filename = "../videos/" + sys.argv[1]
+    # print (filename)
+    # filename = '../videos/Terminator.mp4'
     vid = imageio.get_reader(filename,  'ffmpeg')
     prev = vid.get_data(0)
     prev = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
