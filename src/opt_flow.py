@@ -86,15 +86,7 @@ if __name__ == '__main__':
         fn = 0
 
     i = 1
-    # cam = video.create_capture(fn)
-    # filepath = "../images/candy/candy%00004d.jpg"
-    #filepath = "../images/bbb/bbb%00004d.jpg"
-    #input =  filepath % i
-    # input = "../images/candy/candy%00004d.jpg" % i
-    # print(input)
-    filename = "../videos/" + sys.argv[1]
-    # print (filename)
-    # filename = '../videos/Terminator.mp4'
+    filename = sys.argv[1]
     vid = imageio.get_reader(filename,  'ffmpeg')
     prev = vid.get_data(0)
     prev = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
@@ -105,41 +97,40 @@ if __name__ == '__main__':
     while True:
         start_time = time.time()
         i = i + interval
-        # input = filepath % i
-        # input = "../images/candy/candy%00004d.jpg" % i
-        # print(input)
-        img = vid.get_data(i)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        img = cv2.resize(img, (0,0), fx=scale, fy=scale)
-        # gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        flow = cv2.calcOpticalFlowFarneback(prev, img, None, 0.5, # pyr_scale
-            3, # levels
-            16, # window size
-            1, # iterations
-            5, # poly_n
-            1.1, # poly_sigma
-            0 # flag
-            )
-        prev = img
-        cv2.imshow('flow', draw_flow(img, flow))
-        if show_hsv:
-            cv2.imshow('flow HSV', draw_hsv(flow))
-        if show_glitch:
-            cur_glitch = warp_flow(cur_glitch, flow)
-            cv2.imshow('glitch', cur_glitch)
-
-        ch = 0xFF & cv2.waitKey(5)
-        if ch == 27:
+        try:
+            img = vid.get_data(i)
+        except IndexError:
             break
-        if ch == ord('1'):
-            show_hsv = not show_hsv
-            print('HSV flow visualization is', ['off', 'on'][show_hsv])
-        if ch == ord('2'):
-            show_glitch = not show_glitch
+        else:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            img = cv2.resize(img, (0,0), fx=scale, fy=scale)
+            flow = cv2.calcOpticalFlowFarneback(prev, img, None, 0.5, # pyr_scale
+                3, # levels
+                16, # window size
+                1, # iterations
+                5, # poly_n
+                1.1, # poly_sigma
+                0 # flag
+                )
+            prev = img
+            cv2.imshow('flow', draw_flow(img, flow))
+            if show_hsv:
+                cv2.imshow('flow HSV', draw_hsv(flow))
             if show_glitch:
-                cur_glitch = img
-            print('glitch is', ['off', 'on'][show_glitch])
-        period = (time.time() - start_time)
-        # print("--- Process time: %s sec ---" % period)
+                cur_glitch = warp_flow(cur_glitch, flow)
+                cv2.imshow('glitch', cur_glitch)
 
+            ch = 0xFF & cv2.waitKey(5)
+            if ch == 27:
+                break
+            if ch == ord('1'):
+                show_hsv = not show_hsv
+                print('HSV flow visualization is', ['off', 'on'][show_hsv])
+            if ch == ord('2'):
+                show_glitch = not show_glitch
+                if show_glitch:
+                    cur_glitch = img
+                print('glitch is', ['off', 'on'][show_glitch])
+            period = (time.time() - start_time)
+            # print("--- Process time: %s sec ---" % period)
     cv2.destroyAllWindows()

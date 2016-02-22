@@ -21,9 +21,13 @@ import imageio
 from subprocess import call
 
 scale = 0.4
+vsync_period = 1/float(60)
+DEBUG = False
 
-def flush():
-    sys.stdout.flush()
+def flush(msg):
+    if DEBUG:
+        print(msg)
+        sys.stdout.flush()
 
 if __name__ == '__main__':
     import sys
@@ -33,27 +37,33 @@ if __name__ == '__main__':
     except IndexError:
         fn = 0
 
+    fpsLog = []
     targetFps = float(sys.argv[2])
-    filename = "../videos/" + sys.argv[1]
+    filename = sys.argv[1]
     vid = imageio.get_reader(filename,  'ffmpeg')
     start_time = time.time()
     i = 0
     while True:
         overhead_t1 = time.time()
-        img = vid.get_data(i)
-        # print (t2-t1)
-        i+=1
-        img = cv2.resize(img, (0,0), fx=scale, fy=scale)
-        ch = 0xFF & cv2.waitKey(1)
-        if ch == 27:
+        try:
+            img = vid.get_data(i)
+        except IndexError:
             break
-        overhead_t2 = time.time()
-        now = time.time();
-        period = (now - start_time)
-        if period >= (1/targetFps)-(overhead_t2-overhead_t1):
-            cv2.imshow('FPS player', img)
-            print ("FPS = ", (1/period))
-            flush()
-            start_time = now
-
+        else:
+            # print (t2-t1)
+            i+=1
+            img = cv2.resize(img, (0,0), fx=scale, fy=scale)
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            ch = 0xFF & cv2.waitKey(1)
+            if ch == 27:
+                break
+            overhead_t2 = time.time()
+            now = time.time();
+            period = (now - start_time)
+            if period >= (1/targetFps)-(overhead_t2-overhead_t1):
+                cv2.imshow('FPS player', img)
+                flush("FPS = " + str(1/period))
+                fpsLog.append(int(1/period))
+                start_time = now
     cv2.destroyAllWindows()
+    print("FPS logs", fpsLog)
