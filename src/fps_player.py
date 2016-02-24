@@ -20,8 +20,10 @@ import pylab
 import imageio
 from subprocess import call
 
+vsync_signal = 1/float(60)
 scale = 0.4
 DEBUG = True
+SIMULATE_VSYNC = True
 
 def flush(msg):
     if DEBUG:
@@ -46,31 +48,48 @@ if __name__ == '__main__':
     i = 0
     nFrames = 0
     skippedFrames = 0
-    while True:
-        overhead_t1 = time.time()
-        nFrames += 1
-        try:
-            img = vid.get_data(i)
-        except IndexError:
-            break
-        else:
-            # print (t2-t1)
-            i+=1
-            img = cv2.resize(img, (0,0), fx=scale, fy=scale)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            ch = 0xFF & cv2.waitKey(1)
-            if ch == 27:
+    try:
+        # process the video with "raw speed", i.e., as fast as possible
+        # if the raw speed is not fast enough, it causes "slow motion" when displaying (which is not equivalent to frame dropping)
+        while True:
+            t1 = time.time()
+            overhead_t1 = time.time()
+            nFrames += 1
+            try:
+                img = vid.get_data(i)
+            except IndexError:
                 break
-            overhead_t2 = time.time()
-            now = time.time();
-            period = (now - start_time)
-            if period >= (1/target_fps)-(overhead_t2-overhead_t1):
-                cv2.imshow('FPS player', img)
-                flush("Instant FPS = " + str(60*(nFrames - skippedFrames)/float(nFrames)))
-                start_time = now
             else:
-                skippedFrames += 1
-    cv2.destroyAllWindows()
-    print("nFrames = " , nFrames)
-    print("skippedFrames =", skippedFrames)
-    print("Avg FPS = ", 60*(nFrames - skippedFrames)/float(nFrames))
+                # print (t2-t1)
+                i+=1
+                img = cv2.resize(img, (0,0), fx=scale, fy=scale)
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                ch = 0xFF & cv2.waitKey(1)
+                if ch == 27:
+                    break
+                overhead_t2 = time.time()
+                now = time.time();
+                period = (now - start_time)
+                if period >= (1/target_fps)-(overhead_t2-overhead_t1):
+                    cv2.imshow('FPS player', img)
+                    flush("Instant FPS = " + str(60*(nFrames - skippedFrames)/float(nFrames)))
+                    start_time = now
+                else:
+                    skippedFrames += 1
+            t2 = time.time()
+            elapsed = t2 - t1
+
+            if SIMULATE_VSYNC:
+                if elapsed <= vsync_signal :
+                    # for avoiding "fast motion"
+                    slack = vsync_signal - elapsed
+                    flush("sleep for " + str(slack) + " seconds.")
+                    time.sleep(slack)
+
+
+    except KeyboardInterrupt:
+        print ("Interrupted by user...")
+        cv2.destroyAllWindows()
+        print("nFrames = " , nFrames)
+        print("skippedFrames =", skippedFrames)
+        print("Avg FPS = ", 60*(nFrames - skippedFrames)/float(nFrames))

@@ -120,7 +120,7 @@ if __name__ == '__main__':
                 cur_glitch = warp_flow(cur_glitch, flow)
                 cv2.imshow('glitch', cur_glitch)
 
-            ch = 0xFF & cv2.waitKey(5)
+            ch = 0xFF & cv2.waitKey(1)
             if ch == 27:
                 break
             if ch == ord('1'):
