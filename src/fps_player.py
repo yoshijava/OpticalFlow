@@ -21,8 +21,7 @@ import imageio
 from subprocess import call
 
 scale = 0.4
-vsync_period = 1/float(60)
-DEBUG = False
+DEBUG = True
 
 def flush(msg):
     if DEBUG:
@@ -36,15 +35,20 @@ if __name__ == '__main__':
         fn = sys.argv[1]
     except IndexError:
         fn = 0
-
-    fpsLog = []
-    targetFps = float(sys.argv[2])
+    if(len(sys.argv)<3):
+        target_fps = 60
+    else:
+        target_fps = float(sys.argv[2])
+    flush(sys.argv)
     filename = sys.argv[1]
     vid = imageio.get_reader(filename,  'ffmpeg')
     start_time = time.time()
     i = 0
+    nFrames = 0
+    skippedFrames = 0
     while True:
         overhead_t1 = time.time()
+        nFrames += 1
         try:
             img = vid.get_data(i)
         except IndexError:
@@ -60,10 +64,13 @@ if __name__ == '__main__':
             overhead_t2 = time.time()
             now = time.time();
             period = (now - start_time)
-            if period >= (1/targetFps)-(overhead_t2-overhead_t1):
+            if period >= (1/target_fps)-(overhead_t2-overhead_t1):
                 cv2.imshow('FPS player', img)
-                flush("FPS = " + str(1/period))
-                fpsLog.append(int(1/period))
+                flush("Instant FPS = " + str(60*(nFrames - skippedFrames)/float(nFrames)))
                 start_time = now
+            else:
+                skippedFrames += 1
     cv2.destroyAllWindows()
-    print("FPS logs", fpsLog)
+    print("nFrames = " , nFrames)
+    print("skippedFrames =", skippedFrames)
+    print("Avg FPS = ", 60*(nFrames - skippedFrames)/float(nFrames))
