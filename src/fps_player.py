@@ -31,16 +31,11 @@ def flush(msg):
         sys.stdout.flush()
 
 if __name__ == '__main__':
-    import sys
-    print(__doc__)
-    try:
-        fn = sys.argv[1]
-    except IndexError:
-        fn = 0
     if(len(sys.argv)<3):
         target_fps = 60
     else:
         target_fps = float(sys.argv[2])
+
     flush(sys.argv)
     filename = sys.argv[1]
     vid = imageio.get_reader(filename,  'ffmpeg')
@@ -57,9 +52,6 @@ if __name__ == '__main__':
             nFrames += 1
             try:
                 img = vid.get_data(i)
-            except IndexError:
-                break
-            else:
                 # print (t2-t1)
                 i+=1
                 img = cv2.resize(img, (0,0), fx=scale, fy=scale)
@@ -76,6 +68,9 @@ if __name__ == '__main__':
                     start_time = now
                 else:
                     skippedFrames += 1
+            except IndexError:
+                break
+
             t2 = time.time()
             elapsed = t2 - t1
 
@@ -86,10 +81,10 @@ if __name__ == '__main__':
                     flush("sleep for " + str(slack) + " seconds.")
                     time.sleep(slack)
 
-
     except KeyboardInterrupt:
         print ("Interrupted by user...")
-        cv2.destroyAllWindows()
-        print("nFrames = " , nFrames)
-        print("skippedFrames =", skippedFrames)
-        print("Avg FPS = ", 60*(nFrames - skippedFrames)/float(nFrames))
+
+    cv2.destroyAllWindows()
+    print("nFrames = " , nFrames)
+    print("skippedFrames =", skippedFrames)
+    print("Avg FPS = ", 60*(nFrames - skippedFrames)/float(nFrames))
