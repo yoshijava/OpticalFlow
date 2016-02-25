@@ -21,8 +21,8 @@ import imageio
 from subprocess import call
 
 vsync_signal = 1/float(60)
-scale = 0.4
-DEBUG = True
+scale = 0.1
+DEBUG = False
 SIMULATE_VSYNC = True
 
 # Everything we do here is treated as overheadless
@@ -48,20 +48,20 @@ if __name__ == '__main__':
     start_time = time.time()
     i = 0
     nFrames = 0
-    skippedFrames = 0
+    framePlayed = 0
     vsync_overhead = 0
     try:
         # process the video with "raw speed" assuming it's far faster than 1/target_fps
         # if the raw speed is not fast enough, it causes "slow motion" when displaying (which is not equivalent to frame dropping)
         while True:
             t1 = time.time()
-            nFrames += 1
             try:
                 img = vid.get_data(i)
                 i+=1
             except IndexError:
                 break
 
+            nFrames += 1
             overhead_start = time.time()
             img = blackhole_operation(img)
             ch = 0xFF & cv2.waitKey(1)
@@ -73,11 +73,10 @@ if __name__ == '__main__':
             now = time.time();
             period = (now - start_time)
             if period >= (1/target_fps)-overhead:
+                framePlayed += 1
                 cv2.imshow('FPS player', img)
-                flush("Instant FPS = " + str(60*(nFrames - skippedFrames)/float(nFrames)))
+                flush("Instant FPS = " + str(60*framePlayed/float(nFrames)))
                 start_time = now
-            else:
-                skippedFrames += 1
 
             t2 = time.time()
             elapsed = t2 - t1
@@ -98,5 +97,5 @@ if __name__ == '__main__':
 
     cv2.destroyAllWindows()
     print("nFrames = " , nFrames)
-    print("skippedFrames =", skippedFrames)
-    print("Avg FPS = ", 60*(nFrames - skippedFrames)/float(nFrames))
+    print("skippedFrames =", nFrames-framePlayed)
+    print("Avg FPS = ", 60*framePlayed/float(nFrames))
