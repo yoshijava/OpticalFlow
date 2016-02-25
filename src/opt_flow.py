@@ -29,17 +29,19 @@ from subprocess import call
 interval = 1
 max_vector_dist = [0]*35
 
-def draw_flow(img, flow, step=16):
+def get_flow_lines(img, flow, step=16):
     h, w = img.shape[:2]
     y, x = np.mgrid[step/2:h:step, step/2:w:step].reshape(2,-1).astype(int)
     fx, fy = flow[y,x].T
     lines = np.vstack([x, y, x+fx, y+fy]).T.reshape(-1, 2, 2)
     lines = np.int32(lines + 0.5)
-    vis = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-    cv2.polylines(vis, lines, 0, (0, 255, 0))
+    global max_vector_dist
+    max_vector_dist = get_max_vector_dist(lines)
+    return lines
+
+def get_max_vector_dist(lines):
     max_dist = 0
     for (x1, y1), (x2, y2) in lines:
-        cv2.circle(vis, (x1, y1), 1, (0, 255, 0), -1)
         dist = (x1-x2)^2 + (y1-y2)^2
         if max_dist < dist:
             max_dist = dist
@@ -47,11 +49,18 @@ def draw_flow(img, flow, step=16):
     global scale
     sqrt_max_dist = math.sqrt(max_dist)/scale
     # print("max dist = %d" % (sqrt_max_dist/scale)),
-    index = int(sqrt_max_dist)
-    global max_vector_dist
-    max_vector_dist[index] += 1
+    max_index = int(sqrt_max_dist)
+    max_vector_dist[max_index] += 1
     print (max_vector_dist)
     sys.stdout.flush()
+    return max_vector_dist
+
+def draw_flow(img, flow, step=16):
+    lines = get_flow_lines(img, flow, step)
+    vis = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+    cv2.polylines(vis, lines, 0, (0, 255, 0))
+    for (x1, y1), (x2, y2) in lines:
+        cv2.circle(vis, (x1, y1), 1, (0, 255, 0), -1)
     return vis
 
 if __name__ == '__main__':
