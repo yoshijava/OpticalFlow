@@ -27,29 +27,50 @@ import imageio
 from subprocess import call
 
 interval = 1
-max_vector_dist = [0]*35
+max_vector_dist = [0]
+avg_vector_dist = [0]
 
 def get_flow_lines(img, flow, step=16):
+    global max_vector_dist
+    global avg_vector_dist
     h, w = img.shape[:2]
     y, x = np.mgrid[step/2:h:step, step/2:w:step].reshape(2,-1).astype(int)
     fx, fy = flow[y,x].T
     lines = np.vstack([x, y, x+fx, y+fy]).T.reshape(-1, 2, 2)
     lines = np.int32(lines + 0.5)
-    global max_vector_dist
     max_vector_dist = get_max_vector_dist(lines)
+    avg_vector_dist = get_avg_vector_dist(lines)
     return lines
 
+def get_avg_vector_dist(lines):
+    global avg_vector_dist
+    sum_vector = 0
+    for (x1, y1), (x2, y2) in lines:
+        sum_vector += math.sqrt((x1-x2)**2 + (y1-y2)**2)
+    avg_index = int(sum_vector/len(lines))
+    while avg_index > len(avg_vector_dist)-1:
+        less = avg_index - len(avg_vector_dist) + 1
+        avg_vector_dist += ([0] * less)
+    avg_vector_dist[avg_index] += 1
+    print (avg_vector_dist)
+    sys.stdout.flush()
+    return avg_vector_dist
+
 def get_max_vector_dist(lines):
+    global max_vector_dist
     max_dist = 0
     for (x1, y1), (x2, y2) in lines:
-        dist = (x1-x2)^2 + (y1-y2)^2
+        dist = (x1-x2)**2 + (y1-y2)**2
         if max_dist < dist:
             max_dist = dist
     # if max_dist != 0:
-    global scale
-    sqrt_max_dist = math.sqrt(max_dist)/scale
-    # print("max dist = %d" % (sqrt_max_dist/scale)),
+    sqrt_max_dist = math.sqrt(max_dist)
     max_index = int(sqrt_max_dist)
+    # dynamic extend the size of list
+    while max_index > len(max_vector_dist)-1:
+        less = max_index - len(max_vector_dist) + 1
+        max_vector_dist += ([0] * less)
+    # print(len(max_vector_dist))
     max_vector_dist[max_index] += 1
     print (max_vector_dist)
     sys.stdout.flush()
@@ -101,5 +122,19 @@ if __name__ == '__main__':
             period = (time.time() - start_time)
             # print("--- Process time: %s sec ---" % period)
     cv2.destroyAllWindows()
+
+    avg_vector_dist.extend([0] * (len(max_vector_dist) - len(avg_vector_dist)))
+    plt.figure(1)
+    plt.subplot(211)
+    plt.xlabel('vector length')
+    plt.ylabel('# of vectors')
+    plt.title('Max vector distribution')
     plt.plot(max_vector_dist)
+    plt.subplot(212)
+    plt.title('Avg vector distribution')
+    plt.ylabel('# of vectors')
+    plt.xlabel('vector length')
+    plt.plot(avg_vector_dist)
+    mng = plt.get_current_fig_manager()
+    mng.window.state('zoomed')
     plt.show()
