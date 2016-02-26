@@ -47,7 +47,7 @@ if __name__ == '__main__':
     vsync_signal = 1/fps
     if target_fps == None:
         target_fps = fps
-    flush("The FPS of this video is recorded as " + str(vsync_signal))
+    flush("The FPS of this video is recorded as " + str(fps))
 
     # writer = imageio.get_writer('~/cockatoo_gray.mp4', fps=fps)
 
@@ -63,7 +63,6 @@ if __name__ == '__main__':
             try:
                 img = vid.get_data(int(i))
                 i += fps/target_fps
-                framePlayed +=1
             except IndexError:
                 break
 
