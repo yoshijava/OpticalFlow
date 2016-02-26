@@ -20,10 +20,9 @@ import pylab
 import imageio
 from subprocess import call
 
-vsync_signal = 1/float(60)
+# vsync_signal = 1/float(60)
 scale = 0.4
 DEBUG = True
-SIMULATE_VSYNC = True
 
 def flush(msg):
     if DEBUG:
@@ -32,7 +31,7 @@ def flush(msg):
 
 if __name__ == '__main__':
     if(len(sys.argv)<3):
-        target_fps = float(60)
+        target_fps = None
     else:
         target_fps = float(sys.argv[2])
 
@@ -43,6 +42,18 @@ if __name__ == '__main__':
     i = float(0)
     vsync_overhead = 0
     new_refresh = 0
+
+    fps = vid.get_meta_data()['fps']
+    vsync_signal = 1/fps
+    if target_fps == None:
+        target_fps = fps
+    flush("The FPS of this video is recorded as " + str(vsync_signal))
+
+    # writer = imageio.get_writer('~/cockatoo_gray.mp4', fps=fps)
+
+    # for im in reader:
+    #     writer.append_data(im[:, :, 1])
+    # writer.close()
     try:
         # process the video with "raw speed" assuming it's far faster than 1/target_fps
         # if the raw speed is not fast enough, it causes "slow motion" when displaying (which is not equivalent to frame dropping)
@@ -51,7 +62,8 @@ if __name__ == '__main__':
             t1 = time.time()
             try:
                 img = vid.get_data(int(i))
-                i += 60/target_fps
+                i += fps/target_fps
+                framePlayed +=1
             except IndexError:
                 break
 
@@ -61,7 +73,7 @@ if __name__ == '__main__':
             if ch == 27:
                 break
 
-            flush("Frame to fetch = " + str(i))
+            flush("Frame to fetch = " + str(int(i)))
             cv2.imshow('FPS player', img)
             last_refresh = new_refresh
             new_refresh = time.time()
@@ -69,22 +81,9 @@ if __name__ == '__main__':
             if (t2-t1) < 1/target_fps:
                 time.sleep( 1/target_fps - (t2-t1))
 
-            if SIMULATE_VSYNC:
-                vsync_overhead_start = time.time()
-                if new_refresh - last_refresh <= vsync_signal :
-                    # for avoiding "fast motion"
-                    slack = vsync_signal - (new_refresh - last_refresh)
-                    flush("sleep for " + str(slack) + " seconds.")
-                    time.sleep(slack)
-                    vsync_overhead_end = time.time()
-                    vsync_overhead = vsync_overhead_end - vsync_overhead_start
-                    flush("vsync overhead = " + str(vsync_overhead))
-                else:
-                    flush("Processing speed requires > 1/60. The display may be a bit slow-motion but still correct for smoothness")
-
         wall_clock_t2 = time.time()
     except KeyboardInterrupt:
         print ("Interrupted by user...")
 
     cv2.destroyAllWindows()
-    print("wall clock elapsed: ", (wall_clock_t2-wall_clock_t1), " sec")
+    print("wall clock elapsed = ", (wall_clock_t2-wall_clock_t1), " sec")
