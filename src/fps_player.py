@@ -48,12 +48,9 @@ if __name__ == '__main__':
     if target_fps == None:
         target_fps = fps
     flush("The FPS of this video is recorded as " + str(fps))
+    if target_fps > fps:
+        print("The FPS you requested is higher than recorded FPS, which will result in slow motion.")
 
-    # writer = imageio.get_writer('~/cockatoo_gray.mp4', fps=fps)
-
-    # for im in reader:
-    #     writer.append_data(im[:, :, 1])
-    # writer.close()
     try:
         # process the video with "raw speed" assuming it's far faster than 1/target_fps
         # if the raw speed is not fast enough, it causes "slow motion" when displaying (which is not equivalent to frame dropping)
