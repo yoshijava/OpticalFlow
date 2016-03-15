@@ -24,11 +24,13 @@ import time
 import sys
 import math
 import imageio
+from threading import Timer
 
 DEBUG = True
 interval = 1
 max_vector_dist = [0]
 avg_vector_dist = [0]
+plt_update_flag = True
 
 def flush(msg):
     if DEBUG:
@@ -89,6 +91,40 @@ def draw_flow(img, flow, step=16):
         cv2.circle(vis, (x1, y1), 1, (0, 255, 0), -1)
     return vis
 
+def init_figure():
+    plt_update_flag = True
+    avg_vector_dist.extend([0] * (len(max_vector_dist) - len(avg_vector_dist)))
+    plt.figure(1,figsize=(20,10))
+    plt.ion()
+    plt.subplot(211)
+    plt.xlabel('vector length')
+    plt.ylabel('# of vectors')
+    plt.title('Max vector distribution')
+    plt.plot(max_vector_dist, lw=5, color='red')
+    plt.subplot(212)
+    plt.title('Avg vector distribution')
+    plt.ylabel('# of vectors')
+    plt.xlabel('vector length')
+    plt.plot(avg_vector_dist, lw=5, color='green')
+    # mng = plt.get_current_fig_manager()
+    # mng.window.state('zoomed')
+    plt.show()
+
+def plt_update():
+    while plt_update_flag:
+        avg_vector_dist.extend([0] * (len(max_vector_dist) - len(avg_vector_dist)))
+        plt.subplot(211)
+        plt.cla()
+        # plt.ylim(maxy)
+        plt.plot(max_vector_dist, lw=3, color='red')
+        plt.subplot(212)
+        plt.cla()
+        # plt.ylim(maxy)
+        plt.plot(avg_vector_dist, lw=3, color='green')
+        plt.draw()
+        plt.pause(1)
+
+
 if __name__ == '__main__':
     i = 1
     print (str(sys.argv))
@@ -120,6 +156,10 @@ if __name__ == '__main__':
         out_filename = sys.argv[4]
         writer = imageio.get_writer(out_filename, fps=target_fps)
         write_to_video = True
+
+    init_figure()
+    t = Timer(1.0, plt_update)
+    t.start()
 
     try:
         wall_clock_t1 = time.time()
@@ -154,28 +194,14 @@ if __name__ == '__main__':
             if ch == 27:
                 break
 
-
         wall_clock_t2 = time.time()
     except KeyboardInterrupt:
         print ("Interrupted by user...")
 
     if write_to_video == True:
         writer.close()
-    print("wall clock elapsed = ", (wall_clock_t2-wall_clock_t1), " sec")
-    cv2.destroyAllWindows()
 
-    avg_vector_dist.extend([0] * (len(max_vector_dist) - len(avg_vector_dist)))
-    plt.figure(1,figsize=(20,10))
-    plt.subplot(211)
-    plt.xlabel('vector length')
-    plt.ylabel('# of vectors')
-    plt.title('Max vector distribution')
-    plt.plot(max_vector_dist, lw=3, color='red')
-    plt.subplot(212)
-    plt.title('Avg vector distribution')
-    plt.ylabel('# of vectors')
-    plt.xlabel('vector length')
-    plt.plot(avg_vector_dist, lw=3, color='green')
-    mng = plt.get_current_fig_manager()
-    # mng.window.state('zoomed')
-    plt.show()
+    cv2.destroyAllWindows()
+    plt_update_flag = False
+    plt.show(block=True)
+    print("wall clock elapsed = ", (wall_clock_t2-wall_clock_t1), " sec")
