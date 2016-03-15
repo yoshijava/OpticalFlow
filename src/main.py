@@ -24,7 +24,6 @@ import time
 import sys
 import math
 import imageio
-from subprocess import call
 
 DEBUG = True
 interval = 1
@@ -92,24 +91,35 @@ def draw_flow(img, flow, step=16):
 
 if __name__ == '__main__':
     i = 1
+    print (str(sys.argv))
     if(len(sys.argv)<3):
-        print ("python opt_flow.py <<filename.mp4>> <<scale>> <<target_fps>>")
+        print ("python main.py <<filename.mp4>> <<scale>> (target_fps) (output.mp4)")
+        print ("Arguments enclosed by () are optional.")
         exit()
     filename = sys.argv[1]
     scale = float(sys.argv[2])
-    target_fps = float(sys.argv[3])
 
     vid = imageio.get_reader(filename,  'ffmpeg')
     fps = vid.get_meta_data()['fps']
-    vsync_signal = 1/fps
-    if target_fps == None:
-        target_fps = fps
     flush("The FPS of this video is recorded as " + str(fps))
-    if target_fps > fps:
-        print("The FPS you requested is higher than recorded FPS, which will result in slow motion.")
+    vsync_signal = 1/fps
+    if(len(sys.argv)>=4):
+        target_fps = float(sys.argv[3])
+        print("target fps is set to " + str(target_fps))
+        if target_fps > fps:
+            print("The FPS you requested is higher than recorded FPS, which will result in slow motion.")
+    else:
+        target_fps = fps
+        print("Set to recorded FPS.")
     img = vid.get_data(0)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img = cv2.resize(img, (0,0), fx=scale, fy=scale)
+
+    write_to_video = False
+    if(len(sys.argv)>=5):
+        out_filename = sys.argv[4]
+        writer = imageio.get_writer(out_filename, fps=target_fps)
+        write_to_video = True
 
     try:
         wall_clock_t1 = time.time()
@@ -135,8 +145,10 @@ if __name__ == '__main__':
                 0 # flag
                 )
             prev = img
-            draw_flow(img, flow)
-            # cv2.imshow('flow', draw_flow(img, flow))
+            img_mv = draw_flow(img, flow)
+            cv2.imshow('flow', img_mv)
+            if write_to_video == True:
+                writer.append_data(img_mv)
 
             ch = 0xFF & cv2.waitKey(1)
             if ch == 27:
@@ -147,21 +159,23 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print ("Interrupted by user...")
 
+    if write_to_video == True:
+        writer.close()
     print("wall clock elapsed = ", (wall_clock_t2-wall_clock_t1), " sec")
     cv2.destroyAllWindows()
 
     avg_vector_dist.extend([0] * (len(max_vector_dist) - len(avg_vector_dist)))
-    plt.figure(1)
+    plt.figure(1,figsize=(20,10))
     plt.subplot(211)
     plt.xlabel('vector length')
     plt.ylabel('# of vectors')
     plt.title('Max vector distribution')
-    plt.plot(max_vector_dist)
+    plt.plot(max_vector_dist, lw=3, color='red')
     plt.subplot(212)
     plt.title('Avg vector distribution')
     plt.ylabel('# of vectors')
     plt.xlabel('vector length')
-    plt.plot(avg_vector_dist)
+    plt.plot(avg_vector_dist, lw=3, color='green')
     mng = plt.get_current_fig_manager()
-    mng.window.state('zoomed')
+    # mng.window.state('zoomed')
     plt.show()
