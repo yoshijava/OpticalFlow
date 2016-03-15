@@ -122,8 +122,7 @@ def plt_update():
         # plt.ylim(maxy)
         plt.plot(avg_vector_dist, lw=3, color='green')
         plt.draw()
-        plt.pause(1)
-
+        plt.pause(0.5)
 
 if __name__ == '__main__':
     i = 1
@@ -158,7 +157,7 @@ if __name__ == '__main__':
         write_to_video = True
 
     init_figure()
-    t = Timer(1.0, plt_update)
+    t = Timer(0, plt_update)
     t.start()
 
     try:
@@ -201,7 +200,8 @@ if __name__ == '__main__':
     if write_to_video == True:
         writer.close()
 
-    cv2.destroyAllWindows()
+    t.cancel()
+    cv2.destroyWindow('flow')
     plt_update_flag = False
     plt.show(block=True)
     print("wall clock elapsed = ", (wall_clock_t2-wall_clock_t1), " sec")
