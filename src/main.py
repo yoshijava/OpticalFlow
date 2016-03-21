@@ -30,7 +30,10 @@ DEBUG = True
 interval = 1
 max_vector_dist = [0]
 avg_vector_dist = [0]
+frame_vec_max = []
+frame_vec_avg = []
 plt_update_flag = True
+frame = 0
 
 def flush(msg):
     if DEBUG:
@@ -59,6 +62,9 @@ def get_avg_vector_dist(lines):
         less = avg_index - len(avg_vector_dist) + 1
         avg_vector_dist += ([0] * less)
     avg_vector_dist[avg_index] += 1
+
+    frame_vec_avg.append(avg_index)
+
     print (avg_vector_dist)
     sys.stdout.flush()
     return avg_vector_dist
@@ -79,6 +85,9 @@ def get_max_vector_dist(lines):
         max_vector_dist += ([0] * less)
     # print(len(max_vector_dist))
     max_vector_dist[max_index] += 1
+
+    frame_vec_max.append(max_index)
+
     print (max_vector_dist)
     sys.stdout.flush()
     return max_vector_dist
@@ -96,36 +105,47 @@ def init_figure():
     avg_vector_dist.extend([0] * (len(max_vector_dist) - len(avg_vector_dist)))
     plt.figure(1,figsize=(20,10))
     plt.ion()
-    plt.subplot(211)
-    plt.xlabel('vector length')
-    plt.ylabel('# of vectors')
-    plt.title('Max vector distribution')
-    plt.plot(max_vector_dist, lw=5, color='red')
-    plt.subplot(212)
-    plt.title('Avg vector distribution')
-    plt.ylabel('# of vectors')
-    plt.xlabel('vector length')
-    plt.plot(avg_vector_dist, lw=5, color='green')
+    # plt.subplot(211)
+    # plt.plot(max_vector_dist, lw=5, color='red')
+    # plt.subplot(212)
+    # plt.plot(avg_vector_dist, lw=5, color='green')
     # mng = plt.get_current_fig_manager()
     # mng.window.state('zoomed')
+
     plt.show()
 
 def plt_update():
     while plt_update_flag:
         avg_vector_dist.extend([0] * (len(max_vector_dist) - len(avg_vector_dist)))
-        plt.subplot(211)
+        plt.subplot(411)
         plt.cla()
-        # plt.ylim(maxy)
+        plt.title('Max vector timeline')
+        plt.plot(frame_vec_max,lw=3,color='red')
+
+        plt.subplot(412)
+        plt.cla()
+        plt.title('Avg vector timeline')
+        plt.plot(frame_vec_avg,lw=3,color='green')
+
+        plt.subplot(413)
+        plt.cla()
+        plt.title('Max vector distribution')
+        # plt.xlabel('vector length')
+        plt.ylabel('# of vectors')
         plt.plot(max_vector_dist, lw=3, color='red')
-        plt.subplot(212)
+
+        plt.subplot(414)
         plt.cla()
-        # plt.ylim(maxy)
+        plt.title('Avg vector distribution')
+        plt.ylabel('# of vectors')
+        # plt.xlabel('vector length')
         plt.plot(avg_vector_dist, lw=3, color='green')
+
         plt.draw()
         plt.pause(0.5)
 
 if __name__ == '__main__':
-    i = 1
+    frame = 1
     print (str(sys.argv))
     if(len(sys.argv)<3):
         print ("python main.py <<filename.mp4>> <<scale>> (target_fps) (output.mp4)")
@@ -166,15 +186,15 @@ if __name__ == '__main__':
             t1 = time.time()
             try:
                 prev = img
-                img = vid.get_data(int(i))
-                i += fps/target_fps
+                img = vid.get_data(int(frame))
+                frame += fps/target_fps
             except IndexError:
                 break
 
             img = cv2.resize(img, (0,0), fx=scale, fy=scale)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-            flush("Frame to fetch = " + str(int(i)))
+            flush("Frame to fetch = " + str(int(frame)))
             flow = cv2.calcOpticalFlowFarneback(prev, img, None, 0.5, # pyr_scale
                 3, # levels
                 16, # window size
@@ -200,8 +220,11 @@ if __name__ == '__main__':
     if write_to_video == True:
         writer.close()
 
-    t.cancel()
-    cv2.destroyWindow('flow')
     plt_update_flag = False
-    plt.show(block=True)
+    cv2.destroyWindow('flow')
     print("wall clock elapsed = ", (wall_clock_t2-wall_clock_t1), " sec")
+
+    # print (frame_vec_max)
+    # print (frame_vec_avg)
+    # t.cancel()
+    plt.show(block=True)
