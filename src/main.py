@@ -14,7 +14,7 @@ Keys:
 '''
 
 # Python 2/3 compatibility
-from __future__ import print_function
+# from __future__ import print_function
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,7 +26,7 @@ import math
 import imageio
 from threading import Timer
 
-DEBUG = True
+DEBUG = False
 interval = 1
 max_vector_dist = [0]
 avg_vector_dist = [0]
@@ -37,7 +37,7 @@ frame = 0
 
 def flush(msg):
     if DEBUG:
-        print(msg)
+        print msg
         sys.stdout.flush()
 
 def get_flow_lines(img, flow, step=16):
@@ -65,7 +65,7 @@ def get_avg_vector_dist(lines):
 
     frame_vec_avg.append(avg_index)
 
-    print (avg_vector_dist)
+    flush(avg_vector_dist)
     sys.stdout.flush()
     return avg_vector_dist
 
@@ -83,12 +83,12 @@ def get_max_vector_dist(lines):
     while max_index > len(max_vector_dist)-1:
         less = max_index - len(max_vector_dist) + 1
         max_vector_dist += ([0] * less)
-    # print(len(max_vector_dist))
+    # print len(max_vector_dist)
     max_vector_dist[max_index] += 1
 
     frame_vec_max.append(max_index)
 
-    print (max_vector_dist)
+    flush(max_vector_dist)
     sys.stdout.flush()
     return max_vector_dist
 
@@ -145,27 +145,28 @@ def plt_update():
         plt.pause(0.5)
 
 if __name__ == '__main__':
-    frame = 1
-    print (str(sys.argv))
+    print str(sys.argv)
     if(len(sys.argv)<3):
-        print ("python main.py <<filename.mp4>> <<scale>> (target_fps) (output.mp4)")
-        print ("Arguments enclosed by () are optional.")
+        print "python main.py <<filename.mp4>> <<scale>> (target_fps) (output.mp4)"
+        print "Arguments enclosed by () are optional."
         exit()
     filename = sys.argv[1]
     scale = float(sys.argv[2])
 
     vid = imageio.get_reader(filename,  'ffmpeg')
     fps = vid.get_meta_data()['fps']
+    num_frames = vid._meta['nframes']
+    print "# of frames = " + str(num_frames)
     flush("The FPS of this video is recorded as " + str(fps))
     vsync_signal = 1/fps
     if(len(sys.argv)>=4):
         target_fps = float(sys.argv[3])
-        print("target fps is set to " + str(target_fps))
+        print "target fps is set to " + str(target_fps)
         if target_fps > fps:
-            print("The FPS you requested is higher than recorded FPS, which will result in slow motion.")
+            print "The FPS you requested is higher than recorded FPS, which will result in slow motion."
     else:
         target_fps = fps
-        print("Set to recorded FPS.")
+        print "Set to recorded FPS."
     img = vid.get_data(0)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img = cv2.resize(img, (0,0), fx=scale, fy=scale)
@@ -182,7 +183,7 @@ if __name__ == '__main__':
 
     try:
         wall_clock_t1 = time.time()
-        while True:
+        for frame in range(num_frames):
             t1 = time.time()
             try:
                 prev = img
@@ -215,16 +216,16 @@ if __name__ == '__main__':
 
         wall_clock_t2 = time.time()
     except KeyboardInterrupt:
-        print ("Interrupted by user...")
+        print "Interrupted by user..."
 
     if write_to_video == True:
         writer.close()
 
     plt_update_flag = False
     cv2.destroyWindow('flow')
-    print("wall clock elapsed = ", (wall_clock_t2-wall_clock_t1), " sec")
+    print "wall clock elapsed = ", (wall_clock_t2-wall_clock_t1), " sec"
 
-    # print (frame_vec_max)
-    # print (frame_vec_avg)
+    # print frame_vec_max
+    # print frame_vec_avg
     # t.cancel()
     plt.show(block=True)
