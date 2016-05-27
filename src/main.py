@@ -100,6 +100,27 @@ def draw_flow(img, flow, step=16):
         cv2.circle(vis, (x1, y1), 1, (0, 255, 0), -1)
     return vis
 
+def draw_hsv(flow):
+    h, w = flow.shape[:2]
+    fx, fy = flow[:,:,0], flow[:,:,1]
+    ang = np.arctan2(fy, fx) + np.pi
+    v = np.sqrt(fx*fx+fy*fy)
+    hsv = np.zeros((h, w, 3), np.uint8)
+    hsv[...,0] = ang*(180/np.pi/2)
+    hsv[...,1] = 255
+    hsv[...,2] = np.minimum(v*4, 255)
+    bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+    return bgr
+
+
+def warp_flow(img, flow):
+    h, w = flow.shape[:2]
+    flow = -flow
+    flow[:,:,0] += np.arange(w)
+    flow[:,:,1] += np.arange(h)[:,np.newaxis]
+    res = cv2.remap(img, flow, None, cv2.INTER_LINEAR)
+    return res
+
 def init_figure():
     plt_update_flag = True
     avg_vector_dist.extend([0] * (len(max_vector_dist) - len(avg_vector_dist)))
@@ -116,35 +137,41 @@ def init_figure():
 
 def plt_update():
     while plt_update_flag:
-        avg_vector_dist.extend([0] * (len(max_vector_dist) - len(avg_vector_dist)))
-        plt.subplot(411)
+        # avg_vector_dist.extend([0] * (len(max_vector_dist) - len(avg_vector_dist)))
+        xlim = max(len(max_vector_dist), len(avg_vector_dist))
+        plt.subplot(221)
         plt.cla()
         plt.title('Max vector timeline')
+        plt.ylabel('Vector size')
+        plt.xlabel('timeline')
         plt.plot(frame_vec_max,lw=3,color='red')
 
-        plt.subplot(412)
-        plt.cla()
-        plt.title('Avg vector timeline')
-        plt.plot(frame_vec_avg,lw=3,color='green')
-
-        plt.subplot(413)
+        plt.subplot(222)
         plt.cla()
         plt.title('Max vector distribution')
-        # plt.xlabel('vector length')
+        plt.xlabel('vector length')
         plt.ylabel('# of vectors')
         plt.plot(max_vector_dist, lw=3, color='red')
 
-        plt.subplot(414)
+        plt.subplot(223)
+        plt.cla()
+        plt.title('Avg vector timeline')
+        plt.ylabel('Vector size')
+        plt.xlabel('timeline')
+        plt.plot(frame_vec_avg,lw=3,color='green')
+
+        plt.subplot(224)
         plt.cla()
         plt.title('Avg vector distribution')
         plt.ylabel('# of vectors')
-        # plt.xlabel('vector length')
+        plt.xlabel('vector length')
         plt.plot(avg_vector_dist, lw=3, color='green')
 
         plt.draw()
         plt.pause(0.5)
 
 if __name__ == '__main__':
+
     print str(sys.argv)
     if(len(sys.argv)<3):
         print "python main.py <<filename.mp4>> <<scale>> (target_fps) (output.mp4)"
@@ -154,7 +181,7 @@ if __name__ == '__main__':
     scale = float(sys.argv[2])
 
     vid = imageio.get_reader(filename,  'ffmpeg')
-    fps = vid.get_meta_data()['fps']
+    fps = vid._meta['fps']
     num_frames = vid._meta['nframes']
     print "# of frames = " + str(num_frames)
     flush("The FPS of this video is recorded as " + str(fps))
@@ -181,21 +208,26 @@ if __name__ == '__main__':
     t = Timer(0, plt_update)
     t.start()
 
+    show_hsv = False
+    show_glitch = False
+
     try:
         wall_clock_t1 = time.time()
         for frame in range(num_frames):
             t1 = time.time()
-            try:
-                prev = img
-                img = vid.get_data(int(frame))
-                frame += fps/target_fps
-            except IndexError:
-                break
+
+            prev = img
+            flush("Frame to fetch = " + str(int(frame)))
+            img = vid.get_data(int(frame))
+
+            timestamp = float(frame)/ vid.get_meta_data()['fps']
+            print("Frame " + str(frame) + "'s timestamp = " + str(timestamp))
+
+            frame += fps/target_fps
 
             img = cv2.resize(img, (0,0), fx=scale, fy=scale)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-            flush("Frame to fetch = " + str(int(frame)))
             flow = cv2.calcOpticalFlowFarneback(prev, img, None, 0.5, # pyr_scale
                 3, # levels
                 16, # window size
@@ -210,9 +242,23 @@ if __name__ == '__main__':
             if write_to_video == True:
                 writer.append_data(img_mv)
 
-            ch = 0xFF & cv2.waitKey(1)
+            ch = 0xFF & cv2.waitKey(5)
             if ch == 27:
                 break
+            if ch == ord('1'):
+                show_hsv = not show_hsv
+                print('HSV flow visualization is', ['off', 'on'][show_hsv])
+            if ch == ord('2'):
+                show_glitch = not show_glitch
+                if show_glitch:
+                    cur_glitch = img
+                print('glitch is', ['off', 'on'][show_glitch])
+
+            if show_hsv:
+                cv2.imshow('flow HSV', draw_hsv(flow))
+            if show_glitch:
+                cur_glitch = warp_flow(cur_glitch, flow)
+                cv2.imshow('glitch', cur_glitch)
 
         wall_clock_t2 = time.time()
     except KeyboardInterrupt:
