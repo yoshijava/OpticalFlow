@@ -34,6 +34,8 @@ frame_vec_max = []
 frame_vec_avg = []
 plt_update_flag = True
 frame = 0
+max_x1 = -1
+max_y1 = -1
 
 def flush(msg):
     if DEBUG:
@@ -71,11 +73,14 @@ def get_avg_vector_dist(lines):
 
 def get_max_vector_dist(lines):
     global max_vector_dist
+    global max_x1
+    global max_y1
     max_dist = 0
     for (x1, y1), (x2, y2) in lines:
         dist = (x1-x2)**2 + (y1-y2)**2
         if max_dist < dist:
             max_dist = dist
+            max_x1, max_y1 = x1, y1
     # if max_dist != 0:
     sqrt_max_dist = math.sqrt(max_dist)
     max_index = int(sqrt_max_dist)
@@ -93,33 +98,38 @@ def get_max_vector_dist(lines):
     return max_vector_dist
 
 def draw_flow(img, flow, step=16):
+    global max_x1
+    global max_y1
     lines = get_flow_lines(img, flow, step)
     vis = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
     cv2.polylines(vis, lines, 0, (0, 255, 0))
     for (x1, y1), (x2, y2) in lines:
-        cv2.circle(vis, (x1, y1), 1, (0, 255, 0), -1)
+        if x1 == max_x1 and y1 == max_y1:
+            cv2.circle(vis, (x1, y1), 5, (0, 0, 255), -1)
+        else:
+            cv2.circle(vis, (x1, y1), 1, (0, 255, 0), -1)
     return vis
 
-def draw_hsv(flow):
-    h, w = flow.shape[:2]
-    fx, fy = flow[:,:,0], flow[:,:,1]
-    ang = np.arctan2(fy, fx) + np.pi
-    v = np.sqrt(fx*fx+fy*fy)
-    hsv = np.zeros((h, w, 3), np.uint8)
-    hsv[...,0] = ang*(180/np.pi/2)
-    hsv[...,1] = 255
-    hsv[...,2] = np.minimum(v*4, 255)
-    bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-    return bgr
+# def draw_hsv(flow):
+#     h, w = flow.shape[:2]
+#     fx, fy = flow[:,:,0], flow[:,:,1]
+#     ang = np.arctan2(fy, fx) + np.pi
+#     v = np.sqrt(fx*fx+fy*fy)
+#     hsv = np.zeros((h, w, 3), np.uint8)
+#     hsv[...,0] = ang*(180/np.pi/2)
+#     hsv[...,1] = 255
+#     hsv[...,2] = np.minimum(v*4, 255)
+#     bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+#     return bgr
 
 
-def warp_flow(img, flow):
-    h, w = flow.shape[:2]
-    flow = -flow
-    flow[:,:,0] += np.arange(w)
-    flow[:,:,1] += np.arange(h)[:,np.newaxis]
-    res = cv2.remap(img, flow, None, cv2.INTER_LINEAR)
-    return res
+# def warp_flow(img, flow):
+#     h, w = flow.shape[:2]
+#     flow = -flow
+#     flow[:,:,0] += np.arange(w)
+#     flow[:,:,1] += np.arange(h)[:,np.newaxis]
+#     res = cv2.remap(img, flow, None, cv2.INTER_LINEAR)
+#     return res
 
 def init_figure():
     plt_update_flag = True
@@ -138,7 +148,7 @@ def init_figure():
 def plt_update():
     while plt_update_flag:
         # avg_vector_dist.extend([0] * (len(max_vector_dist) - len(avg_vector_dist)))
-        xlim = max(len(max_vector_dist), len(avg_vector_dist))
+        # xlim = max(len(max_vector_dist), len(avg_vector_dist))
         plt.subplot(221)
         plt.cla()
         plt.title('Max vector timeline')
@@ -184,7 +194,7 @@ if __name__ == '__main__':
     fps = vid._meta['fps']
     num_frames = vid._meta['nframes']
     print "# of frames = " + str(num_frames)
-    flush("The FPS of this video is recorded as " + str(fps))
+    print "The FPS of this video is recorded as " + str(fps)
     vsync_signal = 1/fps
     if(len(sys.argv)>=4):
         target_fps = float(sys.argv[3])
@@ -221,9 +231,7 @@ if __name__ == '__main__':
             img = vid.get_data(int(frame))
 
             timestamp = float(frame)/ vid.get_meta_data()['fps']
-            print("Frame " + str(frame) + "'s timestamp = " + str(timestamp))
-
-            frame += fps/target_fps
+            # print("Frame " + str(frame) + "'s timestamp = " + str(timestamp))
 
             img = cv2.resize(img, (0,0), fx=scale, fy=scale)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -242,23 +250,26 @@ if __name__ == '__main__':
             if write_to_video == True:
                 writer.append_data(img_mv)
 
+            print str(int(frame)) + " -> " + str(frame_vec_max[int(frame)])
+            frame += fps/target_fps
+
             ch = 0xFF & cv2.waitKey(5)
             if ch == 27:
                 break
-            if ch == ord('1'):
-                show_hsv = not show_hsv
-                print('HSV flow visualization is', ['off', 'on'][show_hsv])
-            if ch == ord('2'):
-                show_glitch = not show_glitch
-                if show_glitch:
-                    cur_glitch = img
-                print('glitch is', ['off', 'on'][show_glitch])
-
-            if show_hsv:
-                cv2.imshow('flow HSV', draw_hsv(flow))
-            if show_glitch:
-                cur_glitch = warp_flow(cur_glitch, flow)
-                cv2.imshow('glitch', cur_glitch)
+            # if ch == ord('1'):
+            #     show_hsv = not show_hsv
+            #     print('HSV flow visualization is', ['off', 'on'][show_hsv])
+            # if ch == ord('2'):
+            #     show_glitch = not show_glitch
+            #     if show_glitch:
+            #         cur_glitch = img
+            #     print('glitch is', ['off', 'on'][show_glitch])
+            #
+            # if show_hsv:
+            #     cv2.imshow('flow HSV', draw_hsv(flow))
+            # if show_glitch:
+            #     cur_glitch = warp_flow(cur_glitch, flow)
+            #     cv2.imshow('glitch', cur_glitch)
 
         wall_clock_t2 = time.time()
     except KeyboardInterrupt:
@@ -271,7 +282,6 @@ if __name__ == '__main__':
     cv2.destroyWindow('flow')
     print "wall clock elapsed = ", (wall_clock_t2-wall_clock_t1), " sec"
 
-    # print frame_vec_max
     # print frame_vec_avg
     # t.cancel()
     plt.show(block=True)
